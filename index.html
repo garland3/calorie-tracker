@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A simple offline calorie tracker with optional Dropbox sync.">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,64 +13,6 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <title>Calories</title>
-<style>
-:root{
-  --bg:#f4f6f5; --card:#fff; --text:#17201d; --muted:#65736e; --line:#dfe5e2;
-  --accent:#0f766e; --accent-soft:#d5efe9; --danger:#b42318; --over:#c2410c;
-}
-@media (prefers-color-scheme: dark){
-  :root{ --bg:#0f1413; --card:#18201e; --text:#e8eeec; --muted:#93a29d; --line:#2a3532;
-    --accent:#2dd4bf; --accent-soft:#11403a; --danger:#f97066; --over:#fb923c; }
-}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);
-  font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-body{padding:env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom))}
-main{max-width:520px;margin:0 auto}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px}
-.datenav{display:flex;align-items:center;gap:4px}
-.datenav h1{font-size:18px;margin:0;min-width:130px;text-align:center}
-button{font:inherit;border:0;border-radius:10px;cursor:pointer;background:var(--accent-soft);color:var(--text);padding:10px 14px}
-button.primary{background:var(--accent);color:#fff;font-weight:600}
-@media (prefers-color-scheme: dark){ button.primary{color:#04201c} }
-button.icon{padding:8px 12px;background:transparent;font-size:20px;line-height:1}
-button:disabled{opacity:.5}
-.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.dot.ok{background:#16a34a}.dot.busy{background:#eab308}.dot.err{background:var(--danger)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
-.big{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
-.sub{color:var(--muted);font-size:14px}
-.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:10px}
-.bar>div{height:100%;background:var(--accent);width:0;transition:width .3s}
-.bar.over>div{background:var(--over)}
-form{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
-input{font:inherit;width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);min-width:0}
-input:focus{outline:2px solid var(--accent);outline-offset:-1px}
-form .full{grid-column:1/-1}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.chips button{padding:6px 10px;font-size:14px;border-radius:999px}
-ul{list-style:none;margin:0;padding:0}
-li{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
-li:last-child{border-bottom:0}
-li .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-li .kcal{font-variant-numeric:tabular-nums;font-weight:600}
-li .p{color:var(--muted);font-size:13px}
-li button{padding:4px 10px;background:transparent;color:var(--muted);font-size:18px}
-.empty{color:var(--muted);text-align:center;padding:8px 0}
-h2{font-size:15px;margin:0 0 8px;color:var(--muted);font-weight:600}
-.week{display:flex;align-items:flex-end;gap:6px;height:110px;position:relative}
-.week .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--muted)}
-.week .b{width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
-.week .b.over{background:var(--over)}
-.week .col.cur{color:var(--text);font-weight:700}
-.goalline{position:absolute;left:0;right:0;border-top:1px dashed var(--muted);opacity:.6;pointer-events:none}
-details summary{cursor:pointer;font-weight:600;padding:4px 0}
-.row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
-.row label{flex:1;min-width:120px}
-.hint{font-size:13px;color:var(--muted)}
-.hint code{font-size:12px}
-</style>
 </head>
 <body>
 <main>
@@ -90,9 +33,9 @@ details summary{cursor:pointer;font-weight:600;padding:4px 0}
 
   <section class="card">
     <form id="addForm" autocomplete="off">
-      <input class="full" id="food" list="foods" placeholder="Food (e.g. Banana)" required>
-      <input id="kcal" type="number" inputmode="numeric" min="0" placeholder="kcal" required>
-      <input id="protein" type="number" inputmode="decimal" min="0" step="any" placeholder="Protein g">
+      <input class="full" id="food" list="foods" placeholder="Food (e.g. Banana)" aria-label="Food" required>
+      <input id="kcal" type="number" inputmode="numeric" min="0" placeholder="kcal" aria-label="Calories" required>
+      <input id="protein" type="number" inputmode="decimal" min="0" step="any" placeholder="Protein g" aria-label="Protein in grams">
       <button class="primary" type="submit">Add</button>
     </form>
     <datalist id="foods"></datalist>
@@ -114,277 +57,31 @@ details summary{cursor:pointer;font-weight:600;padding:4px 0}
       <summary>Settings &amp; sync</summary>
       <div class="row">
         <label for="goal">Daily goal (kcal)</label>
-        <input id="goal" type="number" inputmode="numeric" min="0" style="max-width:120px">
+        <input id="goal" type="number" inputmode="numeric" min="0">
       </div>
-      <hr style="border:0;border-top:1px solid var(--line)">
+      <hr>
       <div id="dbxOff">
         <p class="hint">Auto-sync to Dropbox. One-time setup: create an app at
           <b>dropbox.com/developers/apps</b> (Scoped access → App folder), enable
           <code>files.content.read</code> and <code>files.content.write</code> under Permissions, then paste its <b>App key</b> here.</p>
-        <div class="row"><input id="appKey" placeholder="Dropbox App key"></div>
+        <div class="row"><input id="appKey" placeholder="Dropbox App key" aria-label="Dropbox App key"></div>
         <div class="row"><button id="connect">1. Open Dropbox to authorize</button></div>
-        <div class="row"><input id="authCode" placeholder="2. Paste the code Dropbox shows"></div>
+        <div class="row"><input id="authCode" placeholder="2. Paste the code Dropbox shows" aria-label="Dropbox authorization code"></div>
         <div class="row"><button class="primary" id="finish">3. Finish connecting</button></div>
       </div>
       <div id="dbxOn" hidden>
         <p class="hint">Connected to Dropbox. Data syncs automatically to <code>Apps/&lt;your app&gt;/calories.json</code>.</p>
         <div class="row"><button id="syncNow">Sync now</button><button id="disconnect">Disconnect</button></div>
       </div>
-      <hr style="border:0;border-top:1px solid var(--line)">
-      <div class="row"><button id="export">Export backup file</button></div>
+      <hr>
+      <div class="row">
+        <button id="export">Export backup file</button>
+        <button id="import">Import backup file</button>
+        <input id="importFile" type="file" accept="application/json,.json" hidden>
+      </div>
     </details>
   </section>
 </main>
-
-<script>
-(() => {
-'use strict';
-const DATA_KEY = 'cal.data.v1', TOK_KEY = 'cal.dropbox.v1', DIRTY_KEY = 'cal.dirty.v1';
-const REMOTE_PATH = '/calories.json';
-const $ = id => document.getElementById(id);
-
-// ---------- storage ----------
-function readJSON(k, fallback){ try { const v = JSON.parse(localStorage.getItem(k)); return v ?? fallback; } catch { return fallback; } }
-function writeJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.error(e); } }
-
-let data = readJSON(DATA_KEY, null);
-if (!data || typeof data.entries !== 'object') data = { entries: {}, settings: { goal: 2000, updated: 0 } };
-
-function save(){ writeJSON(DATA_KEY, data); setDirty(true); render(); scheduleSync(); }
-function setDirty(v){ try { v ? localStorage.setItem(DIRTY_KEY, '1') : localStorage.removeItem(DIRTY_KEY); } catch {} }
-function isDirty(){ try { return localStorage.getItem(DIRTY_KEY) === '1'; } catch { return false; } }
-
-if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-
-// ---------- dates ----------
-const pad = n => String(n).padStart(2, '0');
-const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
-const shift = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
-let cur = ymd(new Date());
-
-function label(s){
-  const today = ymd(new Date());
-  if (s === today) return 'Today';
-  if (s === shift(today, -1)) return 'Yesterday';
-  return parse(s).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
-// ---------- data helpers ----------
-const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
-const live = () => Object.values(data.entries).filter(e => !e.deleted);
-const forDay = s => live().filter(e => e.date === s).sort((a, b) => a.created - b.created);
-const dayTotal = s => forDay(s).reduce((t, e) => t + (e.kcal || 0), 0);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-function addEntry(name, kcal, protein){
-  const now = Date.now(), id = uid();
-  data.entries[id] = { id, date: cur, name, kcal: Math.round(kcal), protein: protein === '' || protein == null || isNaN(protein) ? null : Number(protein), created: now, updated: now };
-  save();
-}
-function removeEntry(id){
-  const e = data.entries[id]; if (!e) return;
-  e.deleted = true; e.updated = Date.now(); save();
-}
-function foodIndex(){
-  const map = new Map();
-  for (const e of live().sort((a, b) => a.created - b.created)) {
-    const k = e.name.trim().toLowerCase();
-    const m = map.get(k) || { count: 0 };
-    map.set(k, { name: e.name, kcal: e.kcal, protein: e.protein, count: m.count + 1 });
-  }
-  return map;
-}
-
-// ---------- render ----------
-function render(){
-  $('dateLabel').textContent = label(cur);
-  $('next').disabled = cur >= ymd(new Date());
-  const goal = Number(data.settings.goal) || 0;
-  const total = dayTotal(cur);
-  const items = forDay(cur);
-  const protein = items.reduce((t, e) => t + (e.protein || 0), 0);
-  $('total').textContent = total.toLocaleString();
-  const left = goal - total;
-  $('remaining').textContent = goal
-    ? `of ${goal.toLocaleString()} kcal · ${left >= 0 ? left.toLocaleString() + ' left' : (-left).toLocaleString() + ' over'}${protein ? ` · ${Math.round(protein)} g protein` : ''}`
-    : 'kcal';
-  $('bar').classList.toggle('over', goal && total > goal);
-  $('bar').firstElementChild.style.width = goal ? Math.min(100, total / goal * 100) + '%' : '0';
-
-  $('list').innerHTML = items.length
-    ? items.map(e => `<li><span class="name">${esc(e.name)}</span>${e.protein ? `<span class="p">${e.protein} g</span>` : ''}<span class="kcal">${e.kcal}</span><button data-del="${esc(e.id)}" aria-label="Delete">×</button></li>`).join('')
-    : '<li class="empty">Nothing logged yet</li>';
-
-  const idx = foodIndex();
-  $('foods').innerHTML = [...idx.values()].map(f => `<option value="${esc(f.name)}">`).join('');
-  const top = [...idx.values()].sort((a, b) => b.count - a.count).slice(0, 8);
-  $('chips').innerHTML = top.map(f => `<button type="button" data-quick="${esc(f.name.toLowerCase())}">+ ${esc(f.name)} <span class="sub">${f.kcal}</span></button>`).join('');
-
-  const days = Array.from({ length: 7 }, (_, i) => shift(cur, i - 6));
-  const totals = days.map(dayTotal);
-  const max = Math.max(goal, ...totals, 1) * 1.1;
-  const chartH = 110 - 16;
-  $('week').innerHTML = (goal ? `<div class="goalline" style="bottom:${16 + goal / max * chartH}px"></div>` : '') +
-    days.map((d, i) => `<div class="col${d === cur ? ' cur' : ''}" title="${totals[i]} kcal"><div class="b${goal && totals[i] > goal ? ' over' : ''}" style="height:${totals[i] / max * chartH}px"></div><span>${parse(d).toLocaleDateString(undefined, { weekday: 'narrow' })}</span></div>`).join('');
-
-  if (document.activeElement !== $('goal')) $('goal').value = goal || '';
-  const connected = !!tok();
-  $('dbxOn').hidden = !connected; $('dbxOff').hidden = connected;
-}
-
-// ---------- events ----------
-$('prev').onclick = () => { cur = shift(cur, -1); render(); };
-$('next').onclick = () => { if (cur < ymd(new Date())) { cur = shift(cur, 1); render(); } };
-$('addForm').onsubmit = ev => {
-  ev.preventDefault();
-  const name = $('food').value.trim(), kcal = Number($('kcal').value);
-  if (!name || !isFinite(kcal)) return;
-  addEntry(name, kcal, $('protein').value === '' ? null : Number($('protein').value));
-  $('addForm').reset(); $('food').blur();
-};
-$('food').addEventListener('input', () => {
-  const f = foodIndex().get($('food').value.trim().toLowerCase());
-  if (f) { $('kcal').value = f.kcal; $('protein').value = f.protein ?? ''; }
-});
-$('chips').onclick = ev => {
-  const b = ev.target.closest('[data-quick]'); if (!b) return;
-  const f = foodIndex().get(b.dataset.quick); if (f) addEntry(f.name, f.kcal, f.protein);
-};
-$('list').onclick = ev => {
-  const b = ev.target.closest('[data-del]'); if (!b) return;
-  const e = data.entries[b.dataset.del];
-  if (e && confirm(`Delete "${e.name}"?`)) removeEntry(e.id);
-};
-$('goal').onchange = () => { data.settings = { goal: Number($('goal').value) || 0, updated: Date.now() }; save(); };
-$('export').onclick = async () => {
-  const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
-  const name = `calories-${ymd(new Date())}.json`;
-  const file = new File([blob], name, { type: 'application/json' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; }
-  }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-};
-
-// ---------- Dropbox (OAuth PKCE, paste-code flow: works inside home-screen apps) ----------
-const tok = () => readJSON(TOK_KEY, null);
-const saveTok = t => writeJSON(TOK_KEY, t);
-const b64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-$('appKey').value = readJSON('cal.appkey', '') || '';
-$('connect').onclick = async () => {
-  const key = $('appKey').value.trim();
-  if (!key) { alert('Paste your Dropbox App key first.'); return; }
-  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
-  const challenge = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
-  writeJSON('cal.appkey', key); writeJSON('cal.verifier', verifier);
-  const url = 'https://www.dropbox.com/oauth2/authorize?' + new URLSearchParams({
-    client_id: key, response_type: 'code', code_challenge: challenge, code_challenge_method: 'S256', token_access_type: 'offline'
-  });
-  window.open(url, '_blank');
-};
-$('finish').onclick = async () => {
-  const key = readJSON('cal.appkey', ''), verifier = readJSON('cal.verifier', ''), code = $('authCode').value.trim();
-  if (!key || !verifier || !code) { alert('Do step 1 first, then paste the code Dropbox shows you.'); return; }
-  try {
-    const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method: 'POST',
-      body: new URLSearchParams({ grant_type: 'authorization_code', code, code_verifier: verifier, client_id: key }) });
-    const j = await r.json();
-    if (!r.ok) throw new Error(j.error_description || j.error || r.status);
-    saveTok({ key, refresh: j.refresh_token, access: j.access_token, exp: Date.now() + j.expires_in * 1000 });
-    localStorage.removeItem('cal.verifier'); $('authCode').value = '';
-    render(); sync();
-  } catch (e) { alert('Could not connect: ' + e.message); }
-};
-$('disconnect').onclick = () => { if (confirm('Stop syncing on this device? Your data stays on the phone and in Dropbox.')) { localStorage.removeItem(TOK_KEY); status('', 'Not synced'); render(); } };
-$('syncNow').onclick = () => sync();
-
-async function accessToken(){
-  const t = tok(); if (!t) return null;
-  if (t.access && t.exp > Date.now() + 60000) return t.access;
-  const r = await fetch('https://api.dropboxapi.com/oauth2/token', { method: 'POST',
-    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: t.refresh, client_id: t.key }) });
-  if (r.status === 400 || r.status === 401) { localStorage.removeItem(TOK_KEY); render(); throw new Error('Dropbox access revoked — reconnect in Settings'); }
-  if (!r.ok) throw new Error('token refresh ' + r.status);
-  const j = await r.json();
-  t.access = j.access_token; t.exp = Date.now() + j.expires_in * 1000; saveTok(t);
-  return t.access;
-}
-
-async function download(token){
-  const r = await fetch('https://content.dropboxapi.com/2/files/download', { method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Dropbox-API-Arg': JSON.stringify({ path: REMOTE_PATH }) } });
-  if (r.status === 409) { const t = await r.text(); if (t.includes('not_found')) return null; throw new Error('download: ' + t); }
-  if (!r.ok) throw new Error('download ' + r.status);
-  return r.json();
-}
-async function upload(token, obj){
-  const r = await fetch('https://content.dropboxapi.com/2/files/upload', { method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({ path: REMOTE_PATH, mode: 'overwrite', mute: true }) },
-    body: JSON.stringify(obj) });
-  if (!r.ok) throw new Error('upload ' + r.status + ' ' + await r.text());
-}
-
-// Merge two copies: each entry (and settings) keeps whichever version was edited last.
-function merge(local, remote){
-  const out = { entries: { ...local.entries }, settings: local.settings };
-  let localChanged = false, remoteNeedsUpdate = !remote;
-  if (remote) {
-    for (const [id, e] of Object.entries(remote.entries || {})) {
-      const m = out.entries[id];
-      if (!m || (e.updated || 0) > (m.updated || 0)) { out.entries[id] = e; localChanged = true; }
-    }
-    for (const [id, e] of Object.entries(out.entries)) {
-      const r = remote.entries && remote.entries[id];
-      if (!r || (e.updated || 0) > (r.updated || 0)) { remoteNeedsUpdate = true; break; }
-    }
-    const rs = remote.settings || {};
-    if ((rs.updated || 0) > (out.settings.updated || 0)) { out.settings = rs; localChanged = true; }
-    else if ((out.settings.updated || 0) > (rs.updated || 0)) remoteNeedsUpdate = true;
-  }
-  return { out, localChanged, remoteNeedsUpdate };
-}
-
-function status(kind, text){ $('syncDot').className = 'dot ' + kind; $('syncText').textContent = text; }
-
-let syncing = false, again = false, timer = null;
-function scheduleSync(){ clearTimeout(timer); timer = setTimeout(sync, 1500); }
-async function sync(){
-  if (!tok()) { status(isDirty() ? '' : '', 'Not synced'); return; }
-  if (syncing) { again = true; return; }
-  if (!navigator.onLine) { status('busy', 'Offline – will sync'); return; }
-  syncing = true; status('busy', 'Syncing…');
-  try {
-    const token = await accessToken();
-    const remote = await download(token);
-    const { out, localChanged, remoteNeedsUpdate } = merge(data, remote);
-    if (remoteNeedsUpdate) await upload(token, out);
-    if (localChanged) { data = out; writeJSON(DATA_KEY, data); render(); }
-    setDirty(false);
-    status('ok', 'Synced ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
-  } catch (e) {
-    console.error(e); status('err', navigator.onLine ? 'Sync error' : 'Offline – will sync');
-    $('syncBox').title = e.message;
-  } finally {
-    syncing = false;
-    if (again) { again = false; scheduleSync(); }
-  }
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { const t = ymd(new Date()); if (cur > t) cur = t; render(); sync(); }
-});
-window.addEventListener('online', sync);
-window.addEventListener('focus', () => { if (tok()) sync(); });
-
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-
-render();
-sync();
-})();
-</script>
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
