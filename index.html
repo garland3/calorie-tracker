@@ -8,7 +8,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' https://api.anthropic.com https://api.dropboxapi.com https://content.dropboxapi.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="A simple offline calorie tracker with optional Dropbox sync.">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#f4f6f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1413" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -21,27 +22,26 @@
 <body>
 <main id="main">
   <header>
-    <button class="datebtn" id="dateLabel" aria-label="Jump to today">Today</button>
-    <div class="sync" id="syncBox"><span class="dot" id="syncDot"></span><span id="syncText">Not synced</span></div>
+    <button type="button" class="icon" id="prev" aria-label="Previous day"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button type="button" class="datebtn" id="dateLabel" aria-label="Jump to today"><span id="dayName">Today</span><span class="date" id="dayDate"></span></button>
+    <button type="button" class="icon" id="next" aria-label="Next day"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button type="button" class="sync" id="syncBox"><span class="dot" id="syncDot"></span><span id="syncText">Not synced</span></button>
   </header>
 
-  <section class="card">
-    <div class="big" id="total">0</div>
-    <div class="sub" id="remaining">of 2000 kcal</div>
+  <section class="hero">
+    <div class="big"><span id="left">0</span> <span class="unit" id="leftLabel">left</span></div>
     <div class="bar" id="bar"><div></div></div>
+    <div class="sub" id="summary"></div>
   </section>
 
-  <section class="card">
-    <h2>Eaten</h2>
-    <ul id="list"></ul>
-  </section>
+  <section id="meals" aria-label="Eaten"></section>
 
-  <section class="card">
-    <h2>Last 7 days <span class="hint">· tap a day</span></h2>
+  <section>
+    <h2>Last 7 days</h2>
     <div class="week" id="week"></div>
   </section>
 
-  <section class="card">
+  <section class="settings">
     <details id="settings">
       <summary>Settings &amp; sync</summary>
       <div class="row">
@@ -71,7 +71,7 @@
         <div class="row"><button id="syncNow">Sync now</button><button id="disconnect">Disconnect</button></div>
       </div>
       <hr>
-      <p class="hint">AI estimates (📷 photo, ✨ description) use Claude with your own
+      <p class="hint">AI estimates (photos, and descriptions without calories) use Claude with your own
         <b>Anthropic API key</b> from <b>console.anthropic.com</b>. It is stored only on this device and sent only to Anthropic.</p>
       <div class="row"><label for="aiModel">Model</label><select id="aiModel"></select></div>
       <div class="row"><input id="anthropicKey" type="password" autocomplete="off" placeholder="Anthropic API key (sk-ant-…)" aria-label="Anthropic API key"></div>
@@ -106,26 +106,21 @@
   </div>
 </div>
 
-<!-- Everything you tap often lives in this bottom dock, within thumb reach. -->
+<!-- Everything you tap often lives in this bottom bar, within thumb reach. -->
 <div class="toast" id="toast" role="status" hidden><span id="toastText"></span><button id="toastUndo">Undo</button></div>
 <nav class="dock" id="dock">
-  <div class="dayrow">
-    <button type="button" class="icon" id="prev" aria-label="Previous day">‹</button>
-    <div class="chips" id="chips"></div>
-    <button type="button" class="icon" id="next" aria-label="Next day">›</button>
-  </div>
+  <div class="chips" id="chips" hidden></div>
   <form id="addForm" autocomplete="off">
-    <input class="food" id="food" list="foods" placeholder="Food" aria-label="Food (optional)" enterkeyhint="next">
-    <button type="button" class="ai" id="aiPhotoBtn" aria-label="Take a photo to estimate calories">📷</button>
-    <button type="button" class="ai" id="aiLibBtn" aria-label="Pick a photo from your library to estimate calories">🖼️</button>
-    <input id="kcal" type="number" inputmode="numeric" min="0" placeholder="kcal" aria-label="Calories" enterkeyhint="done" required>
-    <input id="protein" type="number" inputmode="decimal" min="0" step="any" placeholder="prot g" aria-label="Protein in grams" enterkeyhint="done">
-    <button type="button" class="ai" id="aiTextBtn" aria-label="Estimate calories from the description">✨</button>
-    <button class="primary add" type="submit" aria-label="Add">+</button>
+    <input id="entry" placeholder="What did you eat?" aria-label="What did you eat? Food, calories, or both" enterkeyhint="done" autocapitalize="sentences" aria-describedby="hint">
+    <span class="tools" id="tools">
+      <button type="button" class="icon" id="aiPhotoBtn" aria-label="Take a photo to estimate calories"><svg viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+      <button type="button" class="icon" id="aiLibBtn" aria-label="Pick a photo from your library to estimate calories"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M20 15l-4.5-4.5L7 19"/></svg></button>
+    </span>
+    <button class="primary go" id="go" type="submit" hidden>Add</button>
   </form>
+  <div class="hint" id="hint" hidden></div>
   <input id="aiFile" type="file" accept="image/*" capture="environment" hidden>
   <input id="aiLibFile" type="file" accept="image/*" hidden>
-  <datalist id="foods"></datalist>
 </nav>
 <script type="module" src="/src/main.js"></script>
 </body>

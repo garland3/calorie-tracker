@@ -8,10 +8,23 @@ A small calorie tracker for your phone. It installs to the home screen, works of
 optionally sync to your own Dropbox. No server and no account: data lives on the device (and in your
 Dropbox, if you connect it).
 
-Built to be used **one-handed and fast**: the food name is optional, so tap kcal, type 280, tap +. Everything you tap often sits in a bottom bar within thumb
-reach. Your most-logged foods are one-tap buttons there, and every add or delete shows an Undo message
-instead of a confirm dialog. Swipe left/right (or tap a bar in the 7-day chart) to change day; tap the
-date to jump back to today. Picking a food you've logged before fills in its calories, so Enter adds it.
+Built to be used **one-handed and fast**. Everything you tap sits in one bar at the bottom: a single
+**"What did you eat?"** box plus camera and photo-library buttons. The box works out what you mean:
+
+| You type | What happens |
+|---|---|
+| `280` | adds 280 kcal (no name needed) |
+| `pizza 300` | adds "pizza", 300 kcal |
+| `chicken 300 35g` | also logs 35 g protein |
+| `omelet` | a food you've had before: adds it with its saved calories and protein |
+| `2 eggs and toast` | asks the AI for an estimate (if you've set up a key) |
+
+The button and a hint under the box show which one will happen before you press Enter. Tapping the box
+also shows your most-logged foods as one-tap suggestions, filtered as you type.
+
+Foods are grouped into meals (Breakfast, Lunch…) by when you logged them. Tap a food to edit it, or swipe
+it left to delete it. Every add and delete shows an Undo message instead of a confirm dialog. Swipe the
+page left/right, tap ‹ ›, or tap a bar in the 7-day chart to change day; tap the date to jump back to today.
 
 Also: optional protein tracking, a daily goal with progress bar, a 7-day chart, Dropbox auto-sync
 across devices, and backup export/import.
@@ -23,11 +36,10 @@ across devices, and backup export/import.
 Always open it from the home screen icon. On iPhone the home-screen app stores its data separately from Safari.
 
 ## AI estimates (optional)
-- **📷 Photo:** snap your plate, or tap **🖼️** to pick a picture already in your photo library. Claude lists each food with estimated calories and protein.
-- **✨ Describe:** type what you ate ("2 eggs, toast with butter, latte") and tap ✨.
+- **Photo:** tap the camera to snap your plate, or the picture icon to pick one already in your photo library. Claude lists each food with estimated calories and protein.
+- **Describe:** type what you ate without calories ("2 eggs, toast with butter, latte") and tap **Estimate**.
 
 You review and adjust the estimate in a panel at the bottom, then add everything with one tap (Undo works too).
-Anything typed in the food box is sent along with a photo as extra detail.
 
 Setup: create an API key at [console.anthropic.com](https://console.anthropic.com) and paste it under
 Settings & sync. The key stays on that device (it is not synced or uploaded anywhere except to Anthropic),
@@ -74,6 +86,7 @@ index.html          page markup (Vite entry)
 src/main.js         UI: rendering, events, sync loop
 src/data.js         data model, localStorage, merge logic (pure, unit tested)
 src/dates.js        date helpers (pure, unit tested)
+src/parse.js        what the input box means, suggestions, meal grouping (pure, unit tested)
 src/dropbox.js      Dropbox OAuth (PKCE) and file download/upload
 src/ai.js           Claude photo/text calorie estimates (SDK lazy-loaded on first use)
 src/sw.js           service worker template; the build fills in the file list and cache version

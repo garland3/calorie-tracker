@@ -5,6 +5,7 @@ import {
 } from './data.js';
 import * as dropbox from './dropbox.js';
 import * as ai from './ai.js';
+import { groupMeals, parseInput, suggest } from './parse.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -85,43 +86,54 @@ function goTo(day) {
 
 // ---------- render ----------
 const CHART_H = 110 - 16; // .week height minus the day-label row
+let editing = null; // id of the entry being edited in place
+
+const fmtTime = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+function entryRow(e) {
+  if (e.id === editing) {
+    return `<li><form class="edit" data-edit="${esc(e.id)}">` +
+      `<input class="n" name="name" value="${esc(e.name)}" placeholder="Food (optional)" aria-label="Food">` +
+      `<label><input name="kcal" type="number" inputmode="numeric" min="0" value="${e.kcal}" aria-label="Calories" required>kcal</label>` +
+      `<label><input name="protein" type="number" inputmode="decimal" min="0" step="any" value="${e.protein ?? ''}" aria-label="Protein grams">g prot</label>` +
+      `<div class="actions"><button type="button" class="del" data-del="${esc(e.id)}">Delete</button><button class="primary">Done</button></div>` +
+      '</form></li>';
+  }
+  return `<li><div class="swipe-bg" aria-hidden="true">Delete</div>` +
+    `<div class="row-main" data-id="${esc(e.id)}" role="button" tabindex="0" aria-label="Edit ${esc(displayName(e))}, ${e.kcal} kcal">` +
+    `<span class="name${e.name ? '' : ' quick'}">${esc(displayName(e))}</span>` +
+    (e.protein ? `<span class="p">${e.protein}g P</span>` : '') +
+    `<span class="kcal">${e.kcal}</span></div></li>`;
+}
 
 function render() {
   const today = ymd(new Date());
-  $('dateLabel').textContent = label(cur);
+  $('dayName').textContent = label(cur);
+  $('dayDate').textContent = parse(cur).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  $('dayDate').hidden = !/^(Today|Yesterday)$/.test(label(cur));
   $('dateLabel').disabled = cur === today;
   $('next').disabled = cur >= today;
 
   const goal = Number(data.settings.goal) || 0;
   const items = entriesForDay(data, cur);
   const total = dayTotal(data, cur);
-  const protein = items.reduce((t, e) => t + (e.protein || 0), 0);
+  const protein = Math.round(items.reduce((t, e) => t + (e.protein || 0), 0));
   const left = goal - total;
-  $('total').textContent = total.toLocaleString();
-  $('remaining').textContent = goal
-    ? `of ${goal.toLocaleString()} kcal · ${left >= 0 ? left.toLocaleString() + ' left' : (-left).toLocaleString() + ' over'}` +
-      (protein ? ` · ${Math.round(protein)} g protein` : '')
-    : 'kcal' + (protein ? ` · ${Math.round(protein)} g protein` : '');
-  $('bar').classList.toggle('over', goal > 0 && total > goal);
+  const over = goal > 0 && left < 0;
+  $('left').textContent = (goal ? Math.abs(left) : total).toLocaleString();
+  $('leftLabel').textContent = goal ? (over ? 'over' : 'left') : 'kcal';
+  $('summary').textContent = (goal ? `${total.toLocaleString()} of ${goal.toLocaleString()} kcal` : 'Set a daily goal in Settings') +
+    (protein ? ` · ${protein} g protein` : '');
+  $('main').querySelector('.hero').classList.toggle('over', over);
+  $('bar').classList.toggle('over', over);
   $('bar').firstElementChild.style.width = goal ? Math.min(100, (total / goal) * 100) + '%' : '0';
 
-  $('list').innerHTML = items.length
-    ? items.map(e =>
-      `<li><span class="name${e.name ? '' : ' quick'}">${esc(displayName(e))}</span>` +
-      (e.protein ? `<span class="p">${e.protein} g</span>` : '') +
-      `<span class="kcal">${e.kcal}</span><button data-del="${esc(e.id)}" aria-label="Delete ${esc(displayName(e))}">×</button></li>`,
+  $('meals').innerHTML = items.length
+    ? groupMeals(items).map(m =>
+      `<div class="meal"><div class="meal-head"><span>${m.name} <span class="t">· ${fmtTime(m.start)}</span></span>` +
+      `<span class="k">${m.kcal.toLocaleString()}</span></div><ul class="entries">${m.entries.map(entryRow).join('')}</ul></div>`,
     ).join('')
-    : '<li class="empty">Nothing logged yet</li>';
-
-  const foods = [...foodIndex(data).values()];
-  $('foods').innerHTML = foods.map(f => `<option value="${esc(f.name)}">`).join('');
-  $('chips').innerHTML = foods.length
-    ? foods
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 12)
-      .map(f => `<button type="button" data-quick="${esc(f.name.toLowerCase())}">+ ${esc(f.name)} <span class="sub">${f.kcal}</span></button>`)
-      .join('')
-    : '<span class="empty">Foods you log show up here for one-tap adding</span>';
+    : '<p class="empty">Nothing logged yet</p>';
 
   const days = Array.from({ length: 7 }, (_, i) => shift(cur, i - 6));
   const totals = days.map(d => dayTotal(data, d));
@@ -134,10 +146,48 @@ function render() {
       `<span>${parse(d).toLocaleDateString(undefined, { weekday: 'narrow' })}</span></div>`,
     ).join('');
 
+  updateDock();
   if (document.activeElement !== $('goal')) $('goal').value = goal || '';
   const connected = dropbox.isConnected();
   $('dbxOn').hidden = !connected;
   $('dbxOff').hidden = connected;
+}
+
+// ---------- the "What did you eat?" bar ----------
+// One box does it all: a number adds calories, "name 300" adds a named food, a food you've had before
+// adds its saved values, and anything else goes to the AI. The button and hint say which will happen.
+function updateDock() {
+  const text = $('entry').value;
+  const foods = foodIndex(data);
+  const p = parseInput(text, foods);
+  const focused = document.activeElement === $('entry');
+
+  const list = focused || text.trim() ? suggest(text, foods).filter(f => f.name.toLowerCase() !== text.trim().toLowerCase()) : [];
+  $('chips').innerHTML = list
+    .map(f => `<button type="button" data-quick="${esc(f.name.toLowerCase())}">${esc(f.name)} <span class="sub">${f.kcal}</span></button>`)
+    .join('');
+  $('chips').hidden = !list.length;
+
+  $('tools').hidden = !!p;
+  $('go').hidden = !p;
+  $('hint').hidden = !p;
+  if (!p) return;
+  const prot = p.protein ? ` · ${p.protein} g protein` : '';
+  if (p.kind === 'ai') {
+    $('go').textContent = 'Estimate';
+    $('hint').textContent = ai.hasApiKey()
+      ? 'AI will estimate it, or add calories: "pizza 300"'
+      : 'Add calories at the end: "pizza 300"';
+  } else {
+    $('go').textContent = 'Add';
+    $('hint').textContent = `Adds ${p.name || 'Quick add'} · ${p.kcal.toLocaleString()} kcal${prot}`;
+  }
+}
+
+function clearEntry() {
+  $('entry').value = '';
+  $('entry').blur();
+  updateDock();
 }
 
 // ---------- events ----------
@@ -148,62 +198,118 @@ $('week').onclick = ev => {
   const col = ev.target.closest('[data-day]');
   if (col) goTo(col.dataset.day);
 };
+$('syncBox').onclick = () => {
+  if (!dropbox.isConnected()) { $('settings').open = true; $('settings').scrollIntoView({ behavior: 'smooth' }); return; }
+  toast($('syncBox').title || $('syncText').textContent);
+  sync();
+};
 
-// Swipe left/right anywhere on the page to change day (right = earlier, like turning back a page).
+// Swipe left/right on the page to change day (right = earlier, like turning back a page).
+// Swiping a food left deletes it instead.
 let touch = null;
 $('main').addEventListener('touchstart', ev => {
   const t = ev.touches[0];
-  touch = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+  const row = ev.target.closest('.row-main');
+  touch = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now(), row, dx: 0, horiz: null } : null;
+}, { passive: true });
+$('main').addEventListener('touchmove', ev => {
+  if (!touch?.row) return;
+  const t = ev.touches[0];
+  const dx = t.clientX - touch.x;
+  const dy = t.clientY - touch.y;
+  touch.horiz ??= Math.abs(dx) > 8 || Math.abs(dy) > 8 ? Math.abs(dx) > Math.abs(dy) : null;
+  if (!touch.horiz) return;
+  touch.dx = Math.min(0, dx);
+  touch.row.classList.add('dragging');
+  touch.row.style.transform = `translateX(${touch.dx}px)`;
 }, { passive: true });
 $('main').addEventListener('touchend', ev => {
   if (!touch) return;
   const t = ev.changedTouches[0];
+  const { row } = touch;
+  if (row) {
+    row.classList.remove('dragging');
+    if (touch.horiz) {
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 50);
+      if (touch.dx < -Math.min(120, row.offsetWidth * 0.3)) {
+        row.style.transform = 'translateX(-100%)';
+        const id = row.dataset.id;
+        setTimeout(() => removeEntry(id), 150);
+      } else {
+        row.style.transform = '';
+      }
+    }
+    touch = null;
+    return;
+  }
   const dx = t.clientX - touch.x;
   const dy = t.clientY - touch.y;
   const quick = Date.now() - touch.at < 600;
   touch = null;
-  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) goTo(shift(cur, dx > 0 ? -1 : 1));
+  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && !ev.target.closest('input, .edit')) goTo(shift(cur, dx > 0 ? -1 : 1));
 }, { passive: true });
+
+let suppressClick = false;
+$('meals').addEventListener('click', ev => {
+  if (suppressClick) return;
+  const del = ev.target.closest('[data-del]');
+  if (del) { editing = null; removeEntry(del.dataset.del); return; }
+  const row = ev.target.closest('.row-main');
+  if (row) { editing = row.dataset.id; render(); }
+});
+$('meals').addEventListener('keydown', ev => {
+  const row = ev.target.closest('.row-main');
+  if (row && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); editing = row.dataset.id; render(); }
+  if (ev.key === 'Escape' && editing) { editing = null; render(); }
+});
+$('meals').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const f = ev.target;
+  const e = data.entries[f.dataset.edit];
+  editing = null;
+  const kcal = Number(f.elements.kcal.value);
+  if (e && f.elements.kcal.value !== '' && Number.isFinite(kcal)) {
+    const protein = f.elements.protein.value === '' ? null : Number(f.elements.protein.value);
+    const name = f.elements.name.value.trim();
+    if (name !== e.name || Math.round(kcal) !== e.kcal || protein !== (e.protein ?? null)) {
+      Object.assign(e, { name, kcal: Math.round(kcal), protein, updated: Date.now() });
+      save();
+      return;
+    }
+  }
+  render();
+});
+// Tapping anywhere else closes the editor without saving.
+document.addEventListener('pointerdown', ev => {
+  if (editing && !ev.target.closest('.edit')) { editing = null; render(); }
+}, true);
+
+$('entry').addEventListener('input', updateDock);
+$('entry').addEventListener('focus', updateDock);
+$('entry').addEventListener('blur', () => setTimeout(updateDock, 0));
+// Keep the keyboard up while tapping a suggestion or the button.
+for (const id of ['chips', 'go']) $(id).addEventListener('pointerdown', ev => ev.preventDefault());
 
 $('addForm').onsubmit = ev => {
   ev.preventDefault();
-  const typed = $('food').value.trim();
-  // Reuse the existing spelling of a known food, so "oatmeal" and "Oatmeal" don't become two foods.
-  const name = foodIndex(data).get(typed.toLowerCase())?.name ?? typed;
-  const kcal = Number($('kcal').value);
-  if (!Number.isFinite(kcal) || $('kcal').value === '') { $('kcal').focus(); return; }
-  addEntry(name, kcal, $('protein').value === '' ? null : Number($('protein').value));
-  $('addForm').reset();
-  $('food').blur();
-};
-
-// Picking a food you've logged before fills in its calories and protein.
-// Enter in the food field: add right away if calories are filled in (the name is optional), else jump to calories.
-$('food').addEventListener('keydown', ev => {
-  if (ev.key !== 'Enter') return;
-  ev.preventDefault();
-  if ($('kcal').value !== '') $('addForm').requestSubmit();
-  else $('kcal').focus();
-});
-
-$('food').addEventListener('input', () => {
-  const f = foodIndex(data).get($('food').value.trim().toLowerCase());
-  if (f) {
-    $('kcal').value = f.kcal;
-    $('protein').value = f.protein ?? '';
+  const p = parseInput($('entry').value, foodIndex(data));
+  if (!p) return;
+  if (p.kind === 'ai') {
+    if (!ai.hasApiKey()) { toast('Add calories at the end, like "pizza 300". Or add an AI key in Settings to get estimates.'); return; }
+    runEstimate({ text: p.text, btn: $('go') });
+    return;
   }
-});
+  addEntry(p.name, p.kcal, p.protein);
+  clearEntry();
+};
 
 $('chips').onclick = ev => {
   const b = ev.target.closest('[data-quick]');
   const f = b && foodIndex(data).get(b.dataset.quick);
-  if (f) addEntry(f.name, f.kcal, f.protein);
-};
-
-$('list').onclick = ev => {
-  const b = ev.target.closest('[data-del]');
-  const e = b && data.entries[b.dataset.del];
-  if (e) removeEntry(e.id);
+  if (!f) return;
+  addEntry(f.name, f.kcal, f.protein);
+  clearEntry();
 };
 
 function saveGoal() {
@@ -286,7 +392,7 @@ let aiPhotoUrl = null;
 function closeSheet() {
   aiRun++;
   $('aiSheet').hidden = true;
-  $('aiTextBtn').classList.remove('busy');
+  $('go').classList.remove('busy');
   $('aiPhotoBtn').classList.remove('busy');
   $('aiLibBtn').classList.remove('busy');
   if (aiPhotoUrl) URL.revokeObjectURL(aiPhotoUrl);
@@ -324,7 +430,7 @@ $('aiItems').addEventListener('click', ev => {
   renderDraft();
 });
 
-async function runEstimate({ text = '', file = null, btn = $('aiTextBtn') }) {
+async function runEstimate({ text = '', file = null, btn }) {
   if (!ai.hasApiKey()) { needKey(); return; }
   closeSheet();
   const run = aiRun;
@@ -359,18 +465,13 @@ async function runEstimate({ text = '', file = null, btn = $('aiTextBtn') }) {
   }
 }
 
-$('aiTextBtn').onclick = () => {
-  const text = $('food').value.trim();
-  if (!text) { $('food').focus(); toast('Type what you ate, e.g. "2 eggs and toast", then tap ✨'); return; }
-  runEstimate({ text });
-};
 // 📷 opens the camera directly; 🖼️ picks an existing picture from the photo library.
 for (const [btnId, inputId] of [['aiPhotoBtn', 'aiFile'], ['aiLibBtn', 'aiLibFile']]) {
   $(btnId).onclick = () => { if (ai.hasApiKey()) $(inputId).click(); else needKey(); };
   $(inputId).onchange = () => {
     const file = $(inputId).files[0];
     $(inputId).value = '';
-    if (file) runEstimate({ file, text: $('food').value.trim(), btn: $(btnId) });
+    if (file) runEstimate({ file, btn: $(btnId) });
   };
 }
 $('aiCancel').onclick = closeSheet;
@@ -378,7 +479,7 @@ $('aiSheet').onclick = ev => { if (ev.target === $('aiSheet')) closeSheet(); };
 $('aiAdd').onclick = () => {
   const list = aiDraft.filter(it => it.name.trim() && Number.isFinite(it.kcal)).map(it => ({ ...it, name: it.name.trim() }));
   closeSheet();
-  $('addForm').reset();
+  clearEntry();
   addEntries(list);
 };
 
