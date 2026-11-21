@@ -46,13 +46,21 @@
       </div>
       <hr>
       <div id="dbxOff">
-        <p class="hint">Auto-sync to Dropbox. One-time setup: create an app at
-          <b>dropbox.com/developers/apps</b> (Scoped access → App folder), enable
-          <code>files.content.read</code> and <code>files.content.write</code> under Permissions, then paste its <b>App key</b> here.</p>
-        <div class="row"><input id="appKey" placeholder="Dropbox App key" aria-label="Dropbox App key"></div>
-        <div class="row"><button id="connect">1. Open Dropbox to authorize</button></div>
-        <div class="row"><input id="authCode" placeholder="2. Paste the code Dropbox shows" aria-label="Dropbox authorization code"></div>
-        <div class="row"><button class="primary" id="finish">3. Finish connecting</button></div>
+        <p class="hint">Sync to your Dropbox to keep a backup and use the app on more than one device.
+          The app can only see its own folder, <code>Dropbox/Apps/…/calories.json</code>.</p>
+        <div class="row"><button class="primary" id="connect">Connect Dropbox</button></div>
+        <div id="dbxPaste" hidden>
+          <p class="hint">In Dropbox, tap <b>Allow</b>, then copy the code it shows and come back here.</p>
+          <div class="row"><button class="primary" id="pasteFinish">Paste code &amp; finish</button></div>
+          <div class="row"><input id="authCode" placeholder="…or paste the code here" aria-label="Dropbox code"><button id="finish">Finish</button></div>
+        </div>
+        <details class="advanced" id="dbxAdvanced">
+          <summary>Advanced: use your own Dropbox app</summary>
+          <p class="hint">Create an app at <b>dropbox.com/developers/apps</b> (Scoped access → App folder), enable
+            <code>files.content.read</code> and <code>files.content.write</code> under Permissions, and paste its
+            <b>App key</b> here. Leave empty to use this app's built-in one.</p>
+          <div class="row"><input id="appKey" placeholder="Your Dropbox App key" aria-label="Your Dropbox App key"></div>
+        </details>
       </div>
       <div id="dbxOn" hidden>
         <p class="hint">Connected to Dropbox. Data syncs automatically to <code>Apps/&lt;your app&gt;/calories.json</code>.</p>
@@ -61,6 +69,7 @@
       <hr>
       <p class="hint">AI estimates (📷 photo, ✨ description) use Claude with your own
         <b>Anthropic API key</b> from <b>console.anthropic.com</b>. It is stored only on this device and sent only to Anthropic.</p>
+      <div class="row"><label for="aiModel">Model</label><select id="aiModel"></select></div>
       <div class="row"><input id="anthropicKey" type="password" autocomplete="off" placeholder="Anthropic API key (sk-ant-…)" aria-label="Anthropic API key"></div>
       <hr>
       <div class="row">
@@ -68,6 +77,8 @@
         <button id="import">Import backup file</button>
         <input id="importFile" type="file" accept="application/json,.json" hidden>
       </div>
+      <hr>
+      <div class="row"><button class="primary wide" id="settingsDone">Save &amp; close</button></div>
     </details>
   </section>
 </main>

@@ -206,9 +206,24 @@ $('list').onclick = ev => {
   if (e) removeEntry(e.id);
 };
 
-$('goal').onchange = () => {
-  data.settings = { goal: Number($('goal').value) || 0, updated: Date.now() };
+function saveGoal() {
+  const goal = Number($('goal').value) || 0;
+  if (goal === (Number(data.settings.goal) || 0)) return;
+  data.settings = { goal, updated: Date.now() };
   save();
+}
+$('goal').onchange = saveGoal;
+
+// Fields also save on their own when you leave them; this makes it explicit and gets settings out of the way.
+$('settingsDone').onclick = () => {
+  saveGoal();
+  ai.setApiKey($('anthropicKey').value.trim());
+  ai.setModel($('aiModel').value);
+  dropbox.setCustomAppKey($('appKey').value.trim());
+  document.activeElement?.blur();
+  $('settings').open = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('Settings saved');
 };
 
 $('export').onclick = async () => {
@@ -252,6 +267,9 @@ $('importFile').onchange = async () => {
 
 // ---------- AI estimates ----------
 $('anthropicKey').value = ai.getApiKey();
+$('aiModel').innerHTML = ai.MODELS.map(m => `<option value="${m.id}">${esc(m.label)}</option>`).join('');
+$('aiModel').value = ai.getModel();
+$('aiModel').onchange = () => ai.setModel($('aiModel').value);
 $('anthropicKey').onchange = () => { ai.setApiKey($('anthropicKey').value.trim()); };
 
 function needKey() {
@@ -362,25 +380,41 @@ $('aiAdd').onclick = () => {
 };
 
 // ---------- Dropbox ----------
-$('appKey').value = dropbox.savedAppKey();
+$('appKey').value = dropbox.customAppKey();
+$('appKey').onchange = () => dropbox.setCustomAppKey($('appKey').value.trim());
+if (!dropbox.hasBuiltInKey()) $('dbxAdvanced').open = true;
 
 $('connect').onclick = async () => {
-  const key = $('appKey').value.trim();
-  if (!key) { alert('Paste your Dropbox App key first.'); return; }
-  window.open(await dropbox.authorizeUrl(key), '_blank');
+  try {
+    const { url, mode } = await dropbox.startAuth();
+    if (mode === 'redirect') { location.assign(url); return; }
+    $('dbxPaste').hidden = false;
+    window.open(url, '_blank');
+  } catch (e) {
+    $('dbxAdvanced').open = true;
+    alert(e.message);
+  }
 };
 
-$('finish').onclick = async () => {
-  const code = $('authCode').value.trim();
-  if (!code) { alert('Paste the code Dropbox shows you.'); return; }
+async function finishConnect(code) {
+  if (!code) { alert('Copy the code Dropbox shows, then try again.'); return; }
   try {
-    await dropbox.finishAuth(code);
+    await dropbox.finishWithCode(code);
     $('authCode').value = '';
+    $('dbxPaste').hidden = true;
+    toast('Dropbox connected');
     render();
     sync();
   } catch (e) {
     alert('Could not connect: ' + e.message);
   }
+}
+$('finish').onclick = () => finishConnect($('authCode').value.trim());
+$('pasteFinish').onclick = async () => {
+  let code = '';
+  try { code = (await navigator.clipboard.readText()).trim(); } catch { /* no clipboard access */ }
+  if (code) finishConnect(code);
+  else { $('authCode').focus(); toast('Paste the code into the box, then tap Finish'); }
 };
 
 $('disconnect').onclick = () => {
@@ -475,4 +509,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 render();
-sync();
+// Coming back from Dropbox's sign-in page (redirect flow)?
+dropbox.handleRedirect().then(r => {
+  if (r?.ok) { toast('Dropbox connected'); render(); }
+  else if (r) { $('settings').open = true; alert('Could not connect Dropbox: ' + r.message); }
+  sync();
+});

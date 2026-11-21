@@ -6,7 +6,20 @@
 import { readJSON, writeJSON } from './data.js';
 
 const KEY_KEY = 'cal.anthropic.key';
-export const MODEL = 'claude-opus-5-5';
+const MODEL_KEY = 'cal.anthropic.model';
+
+// Cheapest first. Haiku is plenty for food estimates; bigger models may judge portions a bit better.
+export const MODELS = [
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5: fastest, cheapest (~$0.001 per estimate)' },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5: more careful (~$0.01)' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5: most capable (~$0.02)' },
+];
+export const DEFAULT_MODEL = MODELS[0].id;
+export const getModel = () => {
+  const m = readJSON(MODEL_KEY, '');
+  return MODELS.some(x => x.id === m) ? m : DEFAULT_MODEL;
+};
+export const setModel = id => writeJSON(MODEL_KEY, id);
 
 export const getApiKey = () => readJSON(KEY_KEY, '') || '';
 export const setApiKey = key => (key ? writeJSON(KEY_KEY, key) : localStorage.removeItem(KEY_KEY));
@@ -77,19 +90,22 @@ export async function estimate({ text = '', image = null }) {
       : 'Estimate what is in this photo.',
   });
 
+  const model = getModel();
+  const params = {
+    model,
+    max_tokens: 16000,
+    // Low effort: this is a quick estimate and speed matters more than deliberation.
+    output_config: { effort: 'low', format: betaZodOutputFormat(Schema) },
+    system: SYSTEM,
+    messages: [{ role: 'user', content }],
+  };
+  // Sonnet/Opus: if a safety classifier declines the request, retry on a fallback model automatically.
+  // (Haiku has no server-side fallback; a refusal there is reported to the user.)
+  if (model !== 'claude-haiku-5-5') Object.assign(params, { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' });
+
   let response;
   try {
-    response = await client.beta.messages.parse({
-      model: MODEL,
-      max_tokens: 16000,
-      // Low effort: this is a quick estimate and speed matters more than deliberation.
-      output_config: { effort: 'low', format: betaZodOutputFormat(Schema) },
-      // If the request is declined by a safety classifier, retry on a fallback model automatically.
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system: SYSTEM,
-      messages: [{ role: 'user', content }],
-    });
+    response = await client.beta.messages.parse(params);
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) throw new AiError('Your Anthropic API key was rejected. Check it in Settings.');
     if (e instanceof Anthropic.PermissionDeniedError) throw new AiError("This API key isn't allowed to use that model.");

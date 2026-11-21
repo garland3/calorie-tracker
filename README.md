@@ -31,19 +31,29 @@ Anything typed in the food box is sent along with a photo as extra detail.
 
 Setup: create an API key at [console.anthropic.com](https://console.anthropic.com) and paste it under
 Settings & sync. The key stays on that device (it is not synced or uploaded anywhere except to Anthropic),
-and each estimate is billed to your Anthropic account, typically about a cent or less. The app uses
-`claude-opus-5-5` at low effort for speed, with automatic fallback if a request is declined.
+and each estimate is billed to your Anthropic account. Pick the model under
+Settings: **Claude Haiku 5.5** (default, fastest and cheapest, about $0.001 per estimate), Sonnet 5.5 or
+Opus 5.5. All run at low effort for speed; Sonnet and Opus automatically retry on a fallback model if a
+request is declined.
 
-## Connect Dropbox (one time per device)
-1. On [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps), click "Create app" → Scoped access → App folder → give it a name (e.g. `my-calories`).
-2. Permissions tab: tick `files.content.read` and `files.content.write` → Submit.
-3. Settings tab: copy the **App key**. You don't need the secret or a redirect URI.
-4. In the app: Settings & sync → paste the App key → "Open Dropbox to authorize" → Allow
-   → copy the code Dropbox shows → switch back to the app → paste it → "Finish connecting".
+## Connect Dropbox
+Settings & sync → **Connect Dropbox** → sign in and tap **Allow**.
+- In a normal browser tab you come straight back, connected.
+- In the home-screen app, Dropbox shows a code instead: copy it, switch back, and tap **Paste code & finish**.
+  (Home-screen apps can't receive the redirect, because they keep separate storage from the browser.)
 
-After that it syncs on its own: after every change, when you open the app, and when you get back online.
-Data is saved to `Dropbox/Apps/<your app>/calories.json`. Use the same App key on a second device and both
-stay in sync. Changes merge per entry (the newest edit wins), so nothing is lost.
+It then syncs on its own: after every change, when you open the app, and when you get back online.
+Data lives in `Dropbox/Apps/<app name>/calories.json`; the app can't see anything else in your Dropbox.
+Connect a second device the same way and both stay in sync. Changes merge per entry (newest edit wins).
+
+Prefer your own Dropbox app? Settings → *Advanced: use your own Dropbox app* takes its App key.
+
+### Maintainer: the built-in Dropbox app
+`src/config.js` holds the public Dropbox App key (no secret is needed with PKCE). The Dropbox app is set up with
+Scoped access → App folder, permissions `files.content.read` + `files.content.write`, "Allow public clients"
+on, and redirect URIs `https://garland3.github.io/calorie-tracker/` and `http://localhost:5173/`.
+While the app is in Dropbox's *development* status, up to 500 users can connect; apply for production
+in the Dropbox app console before going past that.
 
 ## Development
 Requires Node 20+.
