@@ -23,7 +23,7 @@ across devices, and backup export/import.
 Always open it from the home screen icon. On iPhone the home-screen app stores its data separately from Safari.
 
 ## AI estimates (optional)
-- **📷 Photo:** snap your plate. Claude lists each food with estimated calories and protein.
+- **📷 Photo:** take a picture of your plate, or pick one already in your photo library. Claude lists each food with estimated calories and protein.
 - **✨ Describe:** type what you ate ("2 eggs, toast with butter, latte") and tap ✨.
 
 You review and adjust the estimate in a panel at the bottom, then add everything with one tap (Undo works too).

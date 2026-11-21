@@ -116,13 +116,13 @@
   </div>
   <form id="addForm" autocomplete="off">
     <input class="food" id="food" list="foods" placeholder="Food (optional)" aria-label="Food (optional)" enterkeyhint="next">
-    <button type="button" class="ai" id="aiPhotoBtn" aria-label="Estimate calories from a photo">📷</button>
+    <button type="button" class="ai" id="aiPhotoBtn" aria-label="Estimate calories from a photo (take one or pick from your library)">📷</button>
     <input id="kcal" type="number" inputmode="numeric" min="0" placeholder="kcal" aria-label="Calories" enterkeyhint="done" required>
     <input id="protein" type="number" inputmode="decimal" min="0" step="any" placeholder="protein g" aria-label="Protein in grams" enterkeyhint="done">
     <button type="button" class="ai" id="aiTextBtn" aria-label="Estimate calories from the description">✨</button>
     <button class="primary add" type="submit" aria-label="Add">+</button>
   </form>
-  <input id="aiFile" type="file" accept="image/*" capture="environment" hidden>
+  <input id="aiFile" type="file" accept="image/*" hidden>
   <datalist id="foods"></datalist>
 </nav>
 <script type="module" src="/src/main.js"></script>
