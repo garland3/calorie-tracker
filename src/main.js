@@ -27,18 +27,51 @@ function save() {
 navigator.storage?.persist?.().catch(() => {});
 
 // ---------- actions ----------
+function setDeleted(id, deleted) {
+  const e = data.entries[id];
+  if (!e) return;
+  e.deleted = deleted;
+  e.updated = Date.now();
+  save();
+}
+
+// No confirm dialogs: every add/delete is one tap and can be undone from the toast.
 function addEntry(name, kcal, protein) {
   const e = makeEntry({ date: cur, name, kcal, protein });
   data.entries[e.id] = e;
   save();
+  navigator.vibrate?.(10);
+  toast(`Added ${e.name} · ${e.kcal}`, () => setDeleted(e.id, true));
 }
 
 function removeEntry(id) {
   const e = data.entries[id];
   if (!e) return;
-  e.deleted = true;
-  e.updated = Date.now();
-  save();
+  setDeleted(id, true);
+  toast(`Deleted ${e.name}`, () => setDeleted(id, false));
+}
+
+let toastTimer = null;
+let undoFn = null;
+function toast(text, undo) {
+  $('toastText').textContent = text;
+  undoFn = undo;
+  $('toastUndo').hidden = !undo;
+  $('toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $('toast').hidden = true; undoFn = null; }, 4000);
+}
+$('toastUndo').onclick = () => {
+  const fn = undoFn;
+  $('toast').hidden = true;
+  undoFn = null;
+  fn?.();
+};
+
+function goTo(day) {
+  const today = ymd(new Date());
+  cur = day > today ? today : day;
+  render();
 }
 
 // ---------- render ----------
@@ -47,6 +80,7 @@ const CHART_H = 110 - 16; // .week height minus the day-label row
 function render() {
   const today = ymd(new Date());
   $('dateLabel').textContent = label(cur);
+  $('dateLabel').disabled = cur === today;
   $('next').disabled = cur >= today;
 
   const goal = Number(data.settings.goal) || 0;
@@ -72,11 +106,13 @@ function render() {
 
   const foods = [...foodIndex(data).values()];
   $('foods').innerHTML = foods.map(f => `<option value="${esc(f.name)}">`).join('');
-  $('chips').innerHTML = foods
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8)
-    .map(f => `<button type="button" data-quick="${esc(f.name.toLowerCase())}">+ ${esc(f.name)} <span class="sub">${f.kcal}</span></button>`)
-    .join('');
+  $('chips').innerHTML = foods.length
+    ? foods
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12)
+      .map(f => `<button type="button" data-quick="${esc(f.name.toLowerCase())}">+ ${esc(f.name)} <span class="sub">${f.kcal}</span></button>`)
+      .join('')
+    : '<span class="empty">Foods you log show up here for one-tap adding</span>';
 
   const days = Array.from({ length: 7 }, (_, i) => shift(cur, i - 6));
   const totals = days.map(d => dayTotal(data, d));
@@ -84,7 +120,7 @@ function render() {
   $('week').innerHTML =
     (goal ? `<div class="goalline" style="bottom:${16 + (goal / max) * CHART_H}px"></div>` : '') +
     days.map((d, i) =>
-      `<div class="col${d === cur ? ' cur' : ''}" title="${totals[i]} kcal">` +
+      `<div class="col${d === cur ? ' cur' : ''}" data-day="${d}" title="${totals[i]} kcal">` +
       `<div class="b${goal && totals[i] > goal ? ' over' : ''}" style="height:${(totals[i] / max) * CHART_H}px"></div>` +
       `<span>${parse(d).toLocaleDateString(undefined, { weekday: 'narrow' })}</span></div>`,
     ).join('');
@@ -96,12 +132,35 @@ function render() {
 }
 
 // ---------- events ----------
-$('prev').onclick = () => { cur = shift(cur, -1); render(); };
-$('next').onclick = () => { if (cur < ymd(new Date())) { cur = shift(cur, 1); render(); } };
+$('prev').onclick = () => goTo(shift(cur, -1));
+$('next').onclick = () => goTo(shift(cur, 1));
+$('dateLabel').onclick = () => goTo(ymd(new Date()));
+$('week').onclick = ev => {
+  const col = ev.target.closest('[data-day]');
+  if (col) goTo(col.dataset.day);
+};
+
+// Swipe left/right anywhere on the page to change day (right = earlier, like turning back a page).
+let touch = null;
+$('main').addEventListener('touchstart', ev => {
+  const t = ev.touches[0];
+  touch = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+}, { passive: true });
+$('main').addEventListener('touchend', ev => {
+  if (!touch) return;
+  const t = ev.changedTouches[0];
+  const dx = t.clientX - touch.x;
+  const dy = t.clientY - touch.y;
+  const quick = Date.now() - touch.at < 600;
+  touch = null;
+  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) goTo(shift(cur, dx > 0 ? -1 : 1));
+}, { passive: true });
 
 $('addForm').onsubmit = ev => {
   ev.preventDefault();
-  const name = $('food').value.trim();
+  const typed = $('food').value.trim();
+  // Reuse the existing spelling of a known food, so "oatmeal" and "Oatmeal" don't become two foods.
+  const name = foodIndex(data).get(typed.toLowerCase())?.name ?? typed;
   const kcal = Number($('kcal').value);
   if (!name || !Number.isFinite(kcal)) return;
   addEntry(name, kcal, $('protein').value === '' ? null : Number($('protein').value));
@@ -110,6 +169,14 @@ $('addForm').onsubmit = ev => {
 };
 
 // Picking a food you've logged before fills in its calories and protein.
+// Enter in the food field: add right away if calories are already filled in, else jump to calories.
+$('food').addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  if ($('food').value.trim() && $('kcal').value !== '') $('addForm').requestSubmit();
+  else $('kcal').focus();
+});
+
 $('food').addEventListener('input', () => {
   const f = foodIndex(data).get($('food').value.trim().toLowerCase());
   if (f) {
@@ -127,7 +194,7 @@ $('chips').onclick = ev => {
 $('list').onclick = ev => {
   const b = ev.target.closest('[data-del]');
   const e = b && data.entries[b.dataset.del];
-  if (e && confirm(`Delete "${e.name}"?`)) removeEntry(e.id);
+  if (e) removeEntry(e.id);
 };
 
 $('goal').onchange = () => {
@@ -266,6 +333,22 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', sync);
 window.addEventListener('focus', () => { if (dropbox.isConnected()) sync(); });
+
+// Keep body padding in step with the dock, and lift the dock above the on-screen keyboard
+// (iOS doesn't shrink the layout viewport, so a plain bottom:0 bar would hide behind it).
+new ResizeObserver(([e]) => {
+  document.documentElement.style.setProperty('--dock-h', Math.ceil(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight) + 'px');
+}).observe($('dock'));
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const lift = () => {
+    const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    $('dock').style.transform = hidden ? `translateY(${-hidden}px)` : '';
+    $('toast').style.transform = $('dock').style.transform;
+  };
+  vv.addEventListener('resize', lift);
+  vv.addEventListener('scroll', lift);
+}
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

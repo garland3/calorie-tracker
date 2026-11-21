@@ -1,16 +1,20 @@
 # Calories
 
+### ▶ Live app: **https://garland3.github.io/calorie-tracker/**
+
 [![CI](https://github.com/garland3/calorie-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/garland3/calorie-tracker/actions/workflows/ci.yml)
 
 A small calorie tracker for your phone. It installs to the home screen, works offline, and can
 optionally sync to your own Dropbox. No server and no account: data lives on the device (and in your
 Dropbox, if you connect it).
 
-**Live app:** https://garland3.github.io/calorie-tracker/
+Built to be used **one-handed and fast**: everything you tap often sits in a bottom bar within thumb
+reach. Your most-logged foods are one-tap buttons there, and every add or delete shows an Undo message
+instead of a confirm dialog. Swipe left/right (or tap a bar in the 7-day chart) to change day; tap the
+date to jump back to today. Picking a food you've logged before fills in its calories, so Enter adds it.
 
-Features: log food with calories and optional protein, quick-add chips for your most-logged foods,
-autofill from foods you've logged before, a daily goal with progress bar, a 7-day chart, Dropbox
-auto-sync across devices, and backup export/import.
+Also: optional protein tracking, a daily goal with progress bar, a 7-day chart, Dropbox auto-sync
+across devices, and backup export/import.
 
 ## Install on your phone
 - **iPhone:** open the live URL in Safari → Share → "Add to Home Screen".
