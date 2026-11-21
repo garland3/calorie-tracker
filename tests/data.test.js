@@ -95,3 +95,18 @@ describe('helpers', () => {
     expect(emptyData()).toEqual({ entries: {}, settings: { goal: 2000, updated: 0 } });
   });
 });
+
+describe('ai.toEntries', async () => {
+  const { toEntries } = await import('../src/ai.js');
+  it('rounds, clamps and drops nameless items', () => {
+    expect(toEntries([
+      { name: ' Eggs (2) ', kcal: 143.6, protein_g: 12.04 },
+      { name: '', kcal: 10, protein_g: 0 },
+      { name: 'Water', kcal: -5, protein_g: -1 },
+    ])).toEqual([
+      { name: 'Eggs (2)', kcal: 144, protein: 12 },
+      { name: 'Water', kcal: 0, protein: 0 },
+    ]);
+    expect(toEntries(undefined)).toEqual([]);
+  });
+});

@@ -22,6 +22,18 @@ across devices, and backup export/import.
 
 Always open it from the home screen icon. On iPhone the home-screen app stores its data separately from Safari.
 
+## AI estimates (optional)
+- **📷 Photo:** snap your plate. Claude lists each food with estimated calories and protein.
+- **✨ Describe:** type what you ate ("2 eggs, toast with butter, latte") and tap ✨.
+
+You review and adjust the estimate in a panel at the bottom, then add everything with one tap (Undo works too).
+Anything typed in the food box is sent along with a photo as extra detail.
+
+Setup: create an API key at [console.anthropic.com](https://console.anthropic.com) and paste it under
+Settings & sync. The key stays on that device (it is not synced or uploaded anywhere except to Anthropic),
+and each estimate is billed to your Anthropic account, typically about a cent or less. The app uses
+`claude-opus-5-5` at low effort for speed, with automatic fallback if a request is declined.
+
 ## Connect Dropbox (one time per device)
 1. On [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps), click "Create app" → Scoped access → App folder → give it a name (e.g. `my-calories`).
 2. Permissions tab: tick `files.content.read` and `files.content.write` → Submit.
@@ -53,6 +65,7 @@ src/main.js         UI: rendering, events, sync loop
 src/data.js         data model, localStorage, merge logic (pure, unit tested)
 src/dates.js        date helpers (pure, unit tested)
 src/dropbox.js      Dropbox OAuth (PKCE) and file download/upload
+src/ai.js           Claude photo/text calorie estimates (SDK lazy-loaded on first use)
 src/sw.js           service worker template; the build fills in the file list and cache version
 src/style.css       styles (light and dark)
 public/             manifest and icons, copied as-is

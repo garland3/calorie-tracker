@@ -69,10 +69,30 @@ li button{min-width:44px;min-height:44px;padding:0;background:transparent;color:
 .chips::-webkit-scrollbar{display:none}
 .chips button{flex:none;min-height:44px;padding:0 14px;font-size:15px;border-radius:999px;scroll-snap-align:start;white-space:nowrap}
 .chips .empty{font-size:13px;padding:0 4px}
-#addForm{display:grid;grid-template-columns:1fr 1fr 72px;grid-template-rows:auto auto;gap:8px}
+#addForm{display:grid;grid-template-columns:1fr 1fr 48px 64px;grid-template-rows:auto auto;gap:8px}
 #addForm .food{grid-column:1/3}
 #addForm input{min-height:48px}
-#addForm .add{grid-column:3;grid-row:1/3;font-size:34px;font-weight:500;padding:0}
+#addForm .ai{padding:0;font-size:22px;min-height:48px}
+#addForm .add{grid-column:4;grid-row:1/3;font-size:34px;font-weight:500;padding:0}
+#addForm .ai.busy{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgb(0 0 0 / .4);display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.sheet-body{width:100%;max-width:560px;max-height:85vh;overflow-y:auto;background:var(--card);border-radius:18px 18px 0 0;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet-head{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+.sheet-head h2{margin:0 0 2px;color:var(--text);font-size:17px}
+.sheet-head img{width:64px;height:64px;object-fit:cover;border-radius:10px;flex:none}
+#aiItems li{gap:6px;flex-wrap:wrap}
+#aiItems input{padding:8px;min-height:44px}
+#aiItems .n{flex:1 0 100%}
+#aiItems .k{width:80px;flex:none}
+#aiItems .pr{width:64px;flex:none}
+#aiItems .u{color:var(--muted);font-size:13px;margin-right:6px}
+#aiItems li button{margin-left:auto}
+.sheet-actions{display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:8px}
+.sheet-actions button{min-height:52px}
 
 .toast{position:fixed;left:12px;right:12px;bottom:calc(var(--dock-h, 170px) + 8px);z-index:11;max-width:496px;margin:0 auto;
   display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 6px 6px 16px;border-radius:12px;

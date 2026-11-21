@@ -4,6 +4,7 @@ import {
   DATA_KEY, DIRTY_KEY, dayTotal, emptyData, entriesForDay, foodIndex, makeEntry, merge, normalize, readJSON, writeJSON,
 } from './data.js';
 import * as dropbox from './dropbox.js';
+import * as ai from './ai.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -36,13 +37,21 @@ function setDeleted(id, deleted) {
 }
 
 // No confirm dialogs: every add/delete is one tap and can be undone from the toast.
-function addEntry(name, kcal, protein) {
-  const e = makeEntry({ date: cur, name, kcal, protein });
-  data.entries[e.id] = e;
+function addEntries(list) {
+  const added = list.map(({ name, kcal, protein }) => makeEntry({ date: cur, name, kcal, protein }));
+  if (!added.length) return;
+  for (const e of added) data.entries[e.id] = e;
   save();
   navigator.vibrate?.(10);
-  toast(`Added ${e.name} · ${e.kcal}`, () => setDeleted(e.id, true));
+  const kcal = added.reduce((t, e) => t + e.kcal, 0);
+  const text = added.length === 1 ? `Added ${added[0].name} · ${kcal}` : `Added ${added.length} items · ${kcal} kcal`;
+  toast(text, () => {
+    const now = Date.now();
+    for (const e of added) Object.assign(data.entries[e.id], { deleted: true, updated: now });
+    save();
+  });
 }
+const addEntry = (name, kcal, protein) => addEntries([{ name, kcal, protein }]);
 
 function removeEntry(id) {
   const e = data.entries[id];
@@ -239,6 +248,117 @@ $('importFile').onchange = async () => {
   data = out;
   save();
   alert('Backup imported.');
+};
+
+// ---------- AI estimates ----------
+$('anthropicKey').value = ai.getApiKey();
+$('anthropicKey').onchange = () => { ai.setApiKey($('anthropicKey').value.trim()); };
+
+function needKey() {
+  $('settings').open = true;
+  $('anthropicKey').scrollIntoView({ block: 'center' });
+  $('anthropicKey').focus();
+  toast('Add your Anthropic API key to use AI estimates');
+}
+
+let aiDraft = [];
+let aiRun = 0; // bumped on cancel/new run, so a late answer for a closed sheet is ignored
+let aiPhotoUrl = null;
+
+function closeSheet() {
+  aiRun++;
+  $('aiSheet').hidden = true;
+  $('aiTextBtn').classList.remove('busy');
+  $('aiPhotoBtn').classList.remove('busy');
+  if (aiPhotoUrl) URL.revokeObjectURL(aiPhotoUrl);
+  aiPhotoUrl = null;
+}
+
+function renderDraft() {
+  $('aiItems').innerHTML = aiDraft.map((it, i) =>
+    `<li><input class="n" data-i="${i}" data-f="name" value="${esc(it.name)}" aria-label="Food">` +
+    `<input class="k" data-i="${i}" data-f="kcal" type="number" inputmode="numeric" min="0" value="${it.kcal}" aria-label="Calories"><span class="u">kcal</span>` +
+    `<input class="pr" data-i="${i}" data-f="protein" type="number" inputmode="decimal" min="0" step="any" value="${it.protein ?? ''}" aria-label="Protein g"><span class="u">g protein</span>` +
+    `<button data-rm="${i}" aria-label="Remove ${esc(it.name)}">×</button></li>`,
+  ).join('');
+  updateAddButton();
+}
+
+function updateAddButton() {
+  const ok = aiDraft.filter(it => it.name.trim() && Number.isFinite(it.kcal));
+  const kcal = ok.reduce((t, it) => t + it.kcal, 0);
+  $('aiAdd').disabled = !ok.length;
+  $('aiAdd').textContent = ok.length ? `Add ${ok.length === 1 ? '' : ok.length + ' · '}${kcal.toLocaleString()} kcal` : 'Add';
+}
+
+$('aiItems').addEventListener('input', ev => {
+  const { i, f } = ev.target.dataset;
+  if (i == null) return;
+  const v = ev.target.value;
+  aiDraft[i][f] = f === 'name' ? v : v === '' ? (f === 'kcal' ? NaN : null) : Number(v);
+  updateAddButton();
+});
+$('aiItems').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-rm]');
+  if (!b) return;
+  aiDraft.splice(Number(b.dataset.rm), 1);
+  renderDraft();
+});
+
+async function runEstimate({ text = '', file = null }) {
+  if (!ai.hasApiKey()) { needKey(); return; }
+  closeSheet();
+  const run = aiRun;
+  const btn = file ? $('aiPhotoBtn') : $('aiTextBtn');
+  btn.classList.add('busy');
+  aiDraft = [];
+  $('aiItems').innerHTML = '';
+  $('aiNotes').textContent = '';
+  $('aiPhoto').hidden = true;
+  $('aiStatus').textContent = file ? 'Looking at your photo…' : 'Estimating…';
+  updateAddButton();
+  $('aiSheet').hidden = false;
+  try {
+    let image = null;
+    if (file) {
+      image = await ai.photoToJpeg(file);
+      aiPhotoUrl = image.url;
+      $('aiPhoto').src = image.url;
+      $('aiPhoto').hidden = false;
+    }
+    const result = await ai.estimate({ text, image });
+    if (run !== aiRun) return;
+    aiDraft = result.items;
+    $('aiStatus').textContent = aiDraft.length ? 'Check and adjust, then add.' : 'No food found.';
+    $('aiNotes').textContent = result.notes;
+    renderDraft();
+  } catch (e) {
+    if (run !== aiRun) return;
+    console.error(e);
+    $('aiStatus').textContent = e instanceof ai.AiError ? e.message : 'Something went wrong: ' + e.message;
+  } finally {
+    btn.classList.remove('busy');
+  }
+}
+
+$('aiTextBtn').onclick = () => {
+  const text = $('food').value.trim();
+  if (!text) { $('food').focus(); toast('Type what you ate, e.g. "2 eggs and toast", then tap ✨'); return; }
+  runEstimate({ text });
+};
+$('aiPhotoBtn').onclick = () => { if (ai.hasApiKey()) $('aiFile').click(); else needKey(); };
+$('aiFile').onchange = () => {
+  const file = $('aiFile').files[0];
+  $('aiFile').value = '';
+  if (file) runEstimate({ file, text: $('food').value.trim() });
+};
+$('aiCancel').onclick = closeSheet;
+$('aiSheet').onclick = ev => { if (ev.target === $('aiSheet')) closeSheet(); };
+$('aiAdd').onclick = () => {
+  const list = aiDraft.filter(it => it.name.trim() && Number.isFinite(it.kcal)).map(it => ({ ...it, name: it.name.trim() }));
+  closeSheet();
+  $('addForm').reset();
+  addEntries(list);
 };
 
 // ---------- Dropbox ----------
