@@ -4,4 +4,4 @@
 // flow needs no app secret, so it's safe to commit. With it set, users just tap "Connect Dropbox";
 // without it, they have to create their own Dropbox app under Settings → Advanced.
 // The app's OAuth redirect URIs must include the deployed URL (and http://localhost:5173/ for dev).
-export const DROPBOX_APP_KEY = '';
+export const DROPBOX_APP_KEY = 'db3o28hyeuvn4sf';
