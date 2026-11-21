@@ -1,7 +1,7 @@
 import './style.css';
 import { label, parse, shift, ymd } from './dates.js';
 import {
-  DATA_KEY, DIRTY_KEY, dayTotal, emptyData, entriesForDay, foodIndex, makeEntry, merge, normalize, readJSON, writeJSON,
+  DATA_KEY, DIRTY_KEY, dayTotal, displayName, emptyData, entriesForDay, foodIndex, makeEntry, merge, normalize, readJSON, writeJSON,
 } from './data.js';
 import * as dropbox from './dropbox.js';
 import * as ai from './ai.js';
@@ -44,7 +44,7 @@ function addEntries(list) {
   save();
   navigator.vibrate?.(10);
   const kcal = added.reduce((t, e) => t + e.kcal, 0);
-  const text = added.length === 1 ? `Added ${added[0].name} · ${kcal}` : `Added ${added.length} items · ${kcal} kcal`;
+  const text = added.length === 1 ? `Added ${displayName(added[0])} · ${kcal}` : `Added ${added.length} items · ${kcal} kcal`;
   toast(text, () => {
     const now = Date.now();
     for (const e of added) Object.assign(data.entries[e.id], { deleted: true, updated: now });
@@ -57,7 +57,7 @@ function removeEntry(id) {
   const e = data.entries[id];
   if (!e) return;
   setDeleted(id, true);
-  toast(`Deleted ${e.name}`, () => setDeleted(id, false));
+  toast(`Deleted ${displayName(e)}`, () => setDeleted(id, false));
 }
 
 let toastTimer = null;
@@ -107,9 +107,9 @@ function render() {
 
   $('list').innerHTML = items.length
     ? items.map(e =>
-      `<li><span class="name">${esc(e.name)}</span>` +
+      `<li><span class="name${e.name ? '' : ' quick'}">${esc(displayName(e))}</span>` +
       (e.protein ? `<span class="p">${e.protein} g</span>` : '') +
-      `<span class="kcal">${e.kcal}</span><button data-del="${esc(e.id)}" aria-label="Delete ${esc(e.name)}">×</button></li>`,
+      `<span class="kcal">${e.kcal}</span><button data-del="${esc(e.id)}" aria-label="Delete ${esc(displayName(e))}">×</button></li>`,
     ).join('')
     : '<li class="empty">Nothing logged yet</li>';
 
@@ -171,18 +171,18 @@ $('addForm').onsubmit = ev => {
   // Reuse the existing spelling of a known food, so "oatmeal" and "Oatmeal" don't become two foods.
   const name = foodIndex(data).get(typed.toLowerCase())?.name ?? typed;
   const kcal = Number($('kcal').value);
-  if (!name || !Number.isFinite(kcal)) return;
+  if (!Number.isFinite(kcal) || $('kcal').value === '') { $('kcal').focus(); return; }
   addEntry(name, kcal, $('protein').value === '' ? null : Number($('protein').value));
   $('addForm').reset();
   $('food').blur();
 };
 
 // Picking a food you've logged before fills in its calories and protein.
-// Enter in the food field: add right away if calories are already filled in, else jump to calories.
+// Enter in the food field: add right away if calories are filled in (the name is optional), else jump to calories.
 $('food').addEventListener('keydown', ev => {
   if (ev.key !== 'Enter') return;
   ev.preventDefault();
-  if ($('food').value.trim() && $('kcal').value !== '') $('addForm').requestSubmit();
+  if ($('kcal').value !== '') $('addForm').requestSubmit();
   else $('kcal').focus();
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayTotal, emptyData, foodIndex, makeEntry, merge, normalize } from '../src/data.js';
+import { dayTotal, displayName, emptyData, foodIndex, makeEntry, merge, normalize } from '../src/data.js';
 
 const entry = (id, over = {}) => ({ id, date: '2026-11-20', name: 'Apple', kcal: 95, protein: null, created: 1, updated: 1, ...over });
 const doc = (entries, settings = { goal: 2000, updated: 0 }) => ({
@@ -83,6 +83,14 @@ describe('helpers', () => {
   it('indexes foods case-insensitively using the latest values', () => {
     const d = doc([entry('a', { name: 'Apple', kcal: 90, created: 1 }), entry('b', { name: 'apple ', kcal: 100, created: 2 })]);
     expect(foodIndex(d).get('apple')).toMatchObject({ kcal: 100, count: 2 });
+  });
+
+  it('supports calorie-only quick adds', () => {
+    const d = doc([entry('a', { name: '' }), entry('b', { name: 'Apple' })]);
+    expect(displayName(d.entries.a)).toBe('Quick add');
+    expect(displayName(d.entries.b)).toBe('Apple');
+    expect([...foodIndex(d).keys()]).toEqual(['apple']);
+    expect(dayTotal(d, '2026-11-20')).toBe(190);
   });
 
   it('makes entries with rounded kcal and optional protein', () => {

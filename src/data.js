@@ -41,6 +41,9 @@ export function normalize(raw) {
 export const uid = () =>
   globalThis.crypto?.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
 
+/** Entries may be logged with calories only, for speed; they show as "Quick add". */
+export const displayName = e => (e.name || '').trim() || 'Quick add';
+
 export const liveEntries = data => Object.values(data.entries).filter(e => !e.deleted);
 
 export const entriesForDay = (data, day) =>
@@ -57,7 +60,8 @@ export function makeEntry({ date, name, kcal, protein }, now = Date.now()) {
 export function foodIndex(data) {
   const map = new Map();
   for (const e of liveEntries(data).sort((a, b) => a.created - b.created)) {
-    const k = e.name.trim().toLowerCase();
+    const k = (e.name || '').trim().toLowerCase();
+    if (!k) continue; // calorie-only quick adds aren't foods you'd pick again
     const count = (map.get(k)?.count || 0) + 1;
     map.set(k, { name: e.name, kcal: e.kcal, protein: e.protein, count });
   }

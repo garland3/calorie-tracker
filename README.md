@@ -8,7 +8,7 @@ A small calorie tracker for your phone. It installs to the home screen, works of
 optionally sync to your own Dropbox. No server and no account: data lives on the device (and in your
 Dropbox, if you connect it).
 
-Built to be used **one-handed and fast**: everything you tap often sits in a bottom bar within thumb
+Built to be used **one-handed and fast**: the food name is optional, so tap kcal, type 280, tap +. Everything you tap often sits in a bottom bar within thumb
 reach. Your most-logged foods are one-tap buttons there, and every add or delete shows an Undo message
 instead of a confirm dialog. Swipe left/right (or tap a bar in the 7-day chart) to change day; tap the
 date to jump back to today. Picking a food you've logged before fills in its calories, so Enter adds it.
