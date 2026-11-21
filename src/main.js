@@ -288,6 +288,7 @@ function closeSheet() {
   $('aiSheet').hidden = true;
   $('aiTextBtn').classList.remove('busy');
   $('aiPhotoBtn').classList.remove('busy');
+  $('aiLibBtn').classList.remove('busy');
   if (aiPhotoUrl) URL.revokeObjectURL(aiPhotoUrl);
   aiPhotoUrl = null;
 }
@@ -323,11 +324,10 @@ $('aiItems').addEventListener('click', ev => {
   renderDraft();
 });
 
-async function runEstimate({ text = '', file = null }) {
+async function runEstimate({ text = '', file = null, btn = $('aiTextBtn') }) {
   if (!ai.hasApiKey()) { needKey(); return; }
   closeSheet();
   const run = aiRun;
-  const btn = file ? $('aiPhotoBtn') : $('aiTextBtn');
   btn.classList.add('busy');
   aiDraft = [];
   $('aiItems').innerHTML = '';
@@ -364,12 +364,15 @@ $('aiTextBtn').onclick = () => {
   if (!text) { $('food').focus(); toast('Type what you ate, e.g. "2 eggs and toast", then tap ✨'); return; }
   runEstimate({ text });
 };
-$('aiPhotoBtn').onclick = () => { if (ai.hasApiKey()) $('aiFile').click(); else needKey(); };
-$('aiFile').onchange = () => {
-  const file = $('aiFile').files[0];
-  $('aiFile').value = '';
-  if (file) runEstimate({ file, text: $('food').value.trim() });
-};
+// 📷 opens the camera directly; 🖼️ picks an existing picture from the photo library.
+for (const [btnId, inputId] of [['aiPhotoBtn', 'aiFile'], ['aiLibBtn', 'aiLibFile']]) {
+  $(btnId).onclick = () => { if (ai.hasApiKey()) $(inputId).click(); else needKey(); };
+  $(inputId).onchange = () => {
+    const file = $(inputId).files[0];
+    $(inputId).value = '';
+    if (file) runEstimate({ file, text: $('food').value.trim(), btn: $(btnId) });
+  };
+}
 $('aiCancel').onclick = closeSheet;
 $('aiSheet').onclick = ev => { if (ev.target === $('aiSheet')) closeSheet(); };
 $('aiAdd').onclick = () => {
