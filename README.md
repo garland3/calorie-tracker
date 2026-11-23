@@ -8,8 +8,10 @@ A small calorie tracker for your phone. It installs to the home screen, works of
 optionally sync to your own Dropbox. No server and no account: data lives on the device (and in your
 Dropbox, if you connect it).
 
-Built to be used **one-handed and fast**. Everything you tap sits in one bar at the bottom: a single
-**"What did you eat?"** box plus camera and photo-library buttons. The box works out what you mean:
+Built to be used **one-handed and fast**. Under the day's total is a single **"What did you eat?"** box
+with a big button below it: Photo/Library while the box is empty, Add or Estimate once you type. The box
+and button never move: they sit above where the keyboard opens, and only the list below them scrolls.
+The box works out what you mean:
 
 | You type | What happens |
 |---|---|
@@ -19,8 +21,8 @@ Built to be used **one-handed and fast**. Everything you tap sits in one bar at 
 | `omelet` | a food you've had before: adds it with its saved calories and protein |
 | `2 eggs and toast` | asks the AI for an estimate (if you've set up a key) |
 
-The button and a hint under the box show which one will happen before you press Enter. Tapping the box
-also shows your most-logged foods as one-tap suggestions, filtered as you type.
+The button and a hint under it show which one will happen before you press Enter. Your most-logged foods
+sit below as one-tap chips, filtered as you type.
 
 Foods are grouped into meals (Breakfast, Lunch…) by when you logged them. Tap a food to edit it, or swipe
 it left to delete it. Every add and delete shows an Undo message instead of a confirm dialog. Swipe the

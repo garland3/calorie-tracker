@@ -20,7 +20,7 @@
 <title>Calories</title>
 </head>
 <body>
-<main id="main">
+<div class="top" id="top">
   <header>
     <button type="button" class="icon" id="prev" aria-label="Previous day"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     <button type="button" class="datebtn" id="dateLabel" aria-label="Jump to today"><span id="dayName">Today</span><span class="date" id="dayDate"></span></button>
@@ -28,12 +28,32 @@
     <button type="button" class="sync" id="syncBox"><span class="dot" id="syncDot"></span><span id="syncText">Not synced</span></button>
   </header>
 
-  <section class="hero">
+  <section class="hero" id="hero">
     <div class="big"><span id="left">0</span> <span class="unit" id="leftLabel">left</span></div>
     <div class="bar" id="bar"><div></div></div>
     <div class="sub" id="summary"></div>
   </section>
 
+  <!-- The input stays put: it sits above where the keyboard opens, so nothing jumps when you type. -->
+  <section class="composer">
+    <form id="addForm" autocomplete="off">
+      <input id="entry" placeholder="What did you eat?" aria-label="What did you eat? Food, calories, or both" enterkeyhint="done" autocapitalize="sentences" aria-describedby="hint">
+      <div class="actions">
+        <span class="tools" id="tools">
+          <button type="button" id="aiPhotoBtn" aria-label="Take a photo to estimate calories"><svg viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
+          <button type="button" id="aiLibBtn" aria-label="Pick a photo from your library to estimate calories"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M20 15l-4.5-4.5L7 19"/></svg>Library</button>
+        </span>
+        <button class="primary go" id="go" type="submit" hidden>Add</button>
+      </div>
+    </form>
+    <div class="hint" id="hint"></div>
+    <div class="chips" id="chips" hidden></div>
+    <input id="aiFile" type="file" accept="image/*" capture="environment" hidden>
+    <input id="aiLibFile" type="file" accept="image/*" hidden>
+  </section>
+</div>
+
+<main id="main">
   <section id="meals" aria-label="Eaten"></section>
 
   <section>
@@ -106,22 +126,7 @@
   </div>
 </div>
 
-<!-- Everything you tap often lives in this bottom bar, within thumb reach. -->
 <div class="toast" id="toast" role="status" hidden><span id="toastText"></span><button id="toastUndo">Undo</button></div>
-<nav class="dock" id="dock">
-  <div class="chips" id="chips" hidden></div>
-  <form id="addForm" autocomplete="off">
-    <input id="entry" placeholder="What did you eat?" aria-label="What did you eat? Food, calories, or both" enterkeyhint="done" autocapitalize="sentences" aria-describedby="hint">
-    <span class="tools" id="tools">
-      <button type="button" class="icon" id="aiPhotoBtn" aria-label="Take a photo to estimate calories"><svg viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-      <button type="button" class="icon" id="aiLibBtn" aria-label="Pick a photo from your library to estimate calories"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M20 15l-4.5-4.5L7 19"/></svg></button>
-    </span>
-    <button class="primary go" id="go" type="submit" hidden>Add</button>
-  </form>
-  <div class="hint" id="hint" hidden></div>
-  <input id="aiFile" type="file" accept="image/*" capture="environment" hidden>
-  <input id="aiLibFile" type="file" accept="image/*" hidden>
-</nav>
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>

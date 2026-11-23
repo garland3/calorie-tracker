@@ -124,7 +124,7 @@ function render() {
   $('leftLabel').textContent = goal ? (over ? 'over' : 'left') : 'kcal';
   $('summary').textContent = (goal ? `${total.toLocaleString()} of ${goal.toLocaleString()} kcal` : 'Set a daily goal in Settings') +
     (protein ? ` · ${protein} g protein` : '');
-  $('main').querySelector('.hero').classList.toggle('over', over);
+  $('hero').classList.toggle('over', over);
   $('bar').classList.toggle('over', over);
   $('bar').firstElementChild.style.width = goal ? Math.min(100, (total / goal) * 100) + '%' : '0';
 
@@ -160,21 +160,21 @@ function updateDock() {
   const text = $('entry').value;
   const foods = foodIndex(data);
   const p = parseInput(text, foods);
-  const focused = document.activeElement === $('entry');
 
-  const list = focused || text.trim() ? suggest(text, foods).filter(f => f.name.toLowerCase() !== text.trim().toLowerCase()) : [];
+  // Your foods as one-tap chips: most logged first, filtered as you type.
+  const list = suggest(text, foods).filter(f => f.name.toLowerCase() !== text.trim().toLowerCase());
   $('chips').innerHTML = list
     .map(f => `<button type="button" data-quick="${esc(f.name.toLowerCase())}">${esc(f.name)} <span class="sub">${f.kcal}</span></button>`)
     .join('');
   $('chips').hidden = !list.length;
 
+  // The same spot holds Photo/Library when the box is empty and Add/Estimate once you type.
   $('tools').hidden = !!p;
   $('go').hidden = !p;
-  $('hint').hidden = !p;
-  if (!p) return;
+  if (!p) { $('hint').textContent = 'Type 280, "pizza 300", or describe what you ate'; return; }
   const prot = p.protein ? ` · ${p.protein} g protein` : '';
   if (p.kind === 'ai') {
-    $('go').textContent = 'Estimate';
+    $('go').textContent = ai.hasApiKey() ? 'Estimate with AI' : 'Estimate';
     $('hint').textContent = ai.hasApiKey()
       ? 'AI will estimate it, or add calories: "pizza 300"'
       : 'Add calories at the end: "pizza 300"';
@@ -286,8 +286,6 @@ document.addEventListener('pointerdown', ev => {
 }, true);
 
 $('entry').addEventListener('input', updateDock);
-$('entry').addEventListener('focus', updateDock);
-$('entry').addEventListener('blur', () => setTimeout(updateDock, 0));
 // Keep the keyboard up while tapping a suggestion or the button.
 for (const id of ['chips', 'go']) $(id).addEventListener('pointerdown', ev => ev.preventDefault());
 
@@ -328,7 +326,7 @@ $('settingsDone').onclick = () => {
   dropbox.setCustomAppKey($('appKey').value.trim());
   document.activeElement?.blur();
   $('settings').open = false;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  $('main').scrollTo({ top: 0, behavior: 'smooth' });
   toast('Settings saved');
 };
 
@@ -380,7 +378,7 @@ $('anthropicKey').onchange = () => { ai.setApiKey($('anthropicKey').value.trim()
 
 function needKey() {
   $('settings').open = true;
-  $('anthropicKey').scrollIntoView({ block: 'center' });
+  $('anthropicKey').scrollIntoView({ block: 'center', behavior: 'smooth' });
   $('anthropicKey').focus();
   toast('Add your Anthropic API key to use AI estimates');
 }
@@ -591,22 +589,6 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', sync);
 window.addEventListener('focus', () => { if (dropbox.isConnected()) sync(); });
-
-// Keep body padding in step with the dock, and lift the dock above the on-screen keyboard
-// (iOS doesn't shrink the layout viewport, so a plain bottom:0 bar would hide behind it).
-new ResizeObserver(([e]) => {
-  document.documentElement.style.setProperty('--dock-h', Math.ceil(e.borderBoxSize?.[0]?.blockSize ?? e.target.offsetHeight) + 'px');
-}).observe($('dock'));
-if (window.visualViewport) {
-  const vv = window.visualViewport;
-  const lift = () => {
-    const hidden = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    $('dock').style.transform = hidden ? `translateY(${-hidden}px)` : '';
-    $('toast').style.transform = $('dock').style.transform;
-  };
-  vv.addEventListener('resize', lift);
-  vv.addEventListener('scroll', lift);
-}
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
